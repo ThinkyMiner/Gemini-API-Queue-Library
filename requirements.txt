@@ -1,0 +1,7 @@
+google-generativeai
+python-dotenv
+collections-extended  # For the deque
+qdrant-client         # For the Vector DB (RAG)
+sentence-transformers # To create embeddings for RAG
+numpy
+google-ai
