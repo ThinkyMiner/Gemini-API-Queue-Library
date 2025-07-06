@@ -33,7 +33,7 @@ This library acts as a transparent "helper" for the official Google Gemini SDK, 
 
 1.  **Clone the Repository**
     ```bash
-    git clone https://github.com/ThinkyMiner/gemini_queue_lib.git
+    git clone https://github.com/ThinkyMiner/Gemini-API-Queue-Library.git
     ```
 
 2.  **Create a Virtual Environment (Recommended)**
