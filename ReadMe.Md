@@ -1,9 +1,3 @@
-Of course. A great library deserves great documentation.
-
-Here is a comprehensive `README.md` file that explains the architecture, the API, the different context strategies, and provides clear usage examples. You can save this directly in the root of your project.
-
----
-
 # Gemini Advanced Context Manager
 
 A Python library to supercharge Google's Gemini API with advanced context management and API key rotation.
@@ -26,6 +20,14 @@ This library acts as a transparent "helper" for the official Google Gemini SDK, 
 -   **Transparent Architecture**: You still make the final API call yourself, giving you full control over all of Google's parameters (`safety_settings`, `generation_config`, etc.).
 
 ---
+
+## Sequence Diagram
+
+![Architecture Diagram](files/sequential_diagram.png)
+
+## Thought Process
+
+![Thought Process](files/Thought_Process.png)
 
 ## Installation & Setup
 
@@ -64,9 +66,7 @@ This library does **not** make the final API call for you. Instead, it prepares 
 3.  **`client.generate_content()`**: You make the **direct** call to Google's API using the `client` and `contents` from the previous steps.
 4.  **`manager.update_context()`**: After you get a response, you pass the original prompt and the response text back to the manager, which saves the new turn to the conversation history file.
 
-![Architecture Diagram](./files/sequential_diagram.png')
 
-![Thought Process](./files/Thought_Process.png')
 
 ---
 
@@ -229,4 +229,12 @@ python comprehensive_tests.py
 
 # Run the strategy-specific tests
 python test_strategies.py
+
 ```
+
+## User Feedback & Improvements
+
+
+The most important thing please try using this for your projects and report if any bugs found or you think things can be done in a better way.
+
+Thank you !
