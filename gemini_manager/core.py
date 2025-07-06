@@ -5,10 +5,10 @@ import uuid
 from google.ai import generativelanguage_v1beta as genai_services
 from google.api_core import client_options
 from . import persistence
-from .context import BaseContextStrategy, SimpleContextStrategy, RollingSummaryStrategy
+from .context import BaseContextStrategy, SimpleContextStrategy, RollingSummaryStrategy, RetrievalAugmentedStrategy
 
 class GeminiManager:
-    # __init__, _get_next_key, and context management methods are mostly unchanged
+    # ... (all methods before prepare_contents are unchanged) ...
     def __init__(self, context_strategy: BaseContextStrategy = SimpleContextStrategy()):
         load_dotenv()
         api_keys_str = os.getenv("GEMINI_API_KEYS")
@@ -26,51 +26,52 @@ class GeminiManager:
         initial_data = self.context_strategy.get_initial_state()
         persistence.create_new_context(context_id, initial_data)
     def delete_context(self, context_id: str): persistence.delete_context(context_id)
-
-
-    # --- NEW ARCHITECTURE METHODS ---
-
     def get_client(self):
-        """Rotates the API key and returns a configured client."""
         api_key = self._get_next_key()
         print(f"--- Providing client with API Key ending in: ...{api_key[-4:]} ---")
         opts = client_options.ClientOptions(api_key=api_key)
         return genai_services.GenerativeServiceClient(client_options=opts)
 
+
     def prepare_contents(self, prompt: str, context_id: str):
-        """Loads, manages, and returns the 'contents' list for an API call."""
         if not persistence.context_exists(context_id):
-            raise FileNotFoundError(
-                f"Context '{context_id}' not found. "
-                f"Please create it first using `manager.create_context('{context_id}')`."
-            )
+            raise FileNotFoundError(f"Context '{context_id}' not found.")
 
         context_data = persistence.load_context(context_id)
         
-        # Pass a client to the strategy if it needs one (for summarization)
-        client_for_summary = None
-        if isinstance(self.context_strategy, RollingSummaryStrategy):
-            client_for_summary = self.get_client()
-
-        # The strategy prepares the history and updates the context data in-place (e.g., creates a new summary)
-        history = self.context_strategy.prepare_history(context_data, client_for_summary)
+        if isinstance(self.context_strategy, RetrievalAugmentedStrategy):
+            rag_strategy = self.context_strategy
+            collection_name = context_data['collection_name']
+            
+            query_vector = rag_strategy.embedding_model.encode(prompt).tolist()
+            
+            # --- THE FIX IS HERE ---
+            # We add a `score_threshold` to filter out irrelevant results,
+            # even if they fall within the top_k.
+            search_results = rag_strategy.qdrant_client.search(
+                collection_name=collection_name,
+                query_vector=query_vector,
+                limit=rag_strategy.top_k,
+                score_threshold=0.6  # Only return results with a similarity of 0.6 or higher
+            )
+            
+            if search_results:
+                retrieved_context = "\n---\n".join([hit.payload['text'] for hit in search_results])
+                augmented_prompt = (f"Given the following relevant information from our past conversation:\n--- BEGIN CONTEXT ---\n{retrieved_context}\n--- END CONTEXT ---\n\nNow, please answer this question: {prompt}")
+            else:
+                augmented_prompt = prompt
+            
+            return [{"role": "user", "parts": [{"text": augmented_prompt}]}]
         
-        # Save any changes made during preparation (like a new summary)
+        client_for_summary = self.get_client() if isinstance(self.context_strategy, RollingSummaryStrategy) else None
+        history = self.context_strategy.prepare_history(context_data, client=client_for_summary)
         persistence.save_context(context_id, context_data)
-
-        # Append the current prompt to the prepared history to form the final contents
-        final_contents = history + [{"role": "user", "parts": [{"text": prompt}]}]
-        return final_contents
+        return history + [{"role": "user", "parts": [{"text": prompt}]}]
 
     def update_context(self, prompt: str, response_text: str, context_id: str):
-        """Saves the latest turn of conversation back to the context file."""
-        if not persistence.context_exists(context_id):
-            return # Should not happen in normal flow
-        
+        # ... (this method is unchanged) ...
+        if not persistence.context_exists(context_id): return
         context_data = persistence.load_context(context_id)
-        
-        # Delegate the update logic to the strategy
         self.context_strategy.update_state(prompt, response_text, context_data)
-        
         persistence.save_context(context_id, context_data)
         print(f"--- Context '{context_id}' updated. ---")
