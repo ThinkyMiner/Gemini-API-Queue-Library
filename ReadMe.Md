@@ -31,8 +31,7 @@ This library acts as a transparent "helper" for the official Google Gemini SDK, 
 
 1.  **Clone the Repository**
     ```bash
-    git clone <your-repository-url>
-    cd <your-repository-name>
+    git clone <(https://github.com/ThinkyMiner/gemini_queue_lib.git)>
     ```
 
 2.  **Create a Virtual Environment (Recommended)**
@@ -65,7 +64,9 @@ This library does **not** make the final API call for you. Instead, it prepares 
 3.  **`client.generate_content()`**: You make the **direct** call to Google's API using the `client` and `contents` from the previous steps.
 4.  **`manager.update_context()`**: After you get a response, you pass the original prompt and the response text back to the manager, which saves the new turn to the conversation history file.
 
-![Architecture Diagram](https'://i.imgur.com/GQqh0gq.png')
+![Architecture Diagram](./files/architecture.png')
+
+![Thought Process](./files/thought_process.png')
 
 ---
 
